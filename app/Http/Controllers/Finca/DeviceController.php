@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Finca;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Device;
+use Illuminate\Support\Facades\DB;
+use Auth;
 
 class DeviceController extends Controller
 {
@@ -15,9 +17,26 @@ class DeviceController extends Controller
      * @return json  respuesta
      */
     public function device(){
-    	$device = Device::orderBy('Description', 'asc')->get();
-    	
-    	return response()->json(['data'=> $device],200);
+        if (Auth::user()->id == 1) {
+            $device = Device::orderBy('Description', 'asc')->get();
+            
+            return response()->json(['data'=> $device],200);
+        }
+            $devices=DB::table('door_permissions')
+            ->where('Id_user', Auth::user()->id)
+            ->get();
+            $final=[];
+
+            foreach($devices as $device){
+                $usrdevices=Device::where('IdDevice', $device->Id_Device)
+                ->get();
+                foreach($usrdevices as $usrdev){
+                    array_push($final,$usrdev);
+                }
+            }
+
+            return response()->json(['data'=> $final],200);
+        
     }
 
     /**

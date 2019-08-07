@@ -28,18 +28,50 @@ class UserController extends Controller
      *
      * @return json  respuesta
      */
-    public function allusers(){
-    	$allusers = DB::table('User')
+    public function allusers()
+    {
+        if (Auth::user()->id == 1) {
+            $allusers = DB::table('User')
                 ->join('Department', 'User.IdDepartment', '=', 'Department.IdDepartment')
+                ->where('User.IdDepartment','NOT LIKE',1)
                 ->orderBy('User.Name', 'asc')
                 ->get();
-    	
-        /*
-            por motivos de depurar la base de datos quitamos el filtro
-            ->where('User.IdDepartment','NOT LIKE',1)
-        */
-        
-    	return response()->json(['respuesta'=> $allusers],200);
+
+            /*
+        por motivos de depurar la base de datos quitamos el filtro
+        ->where('User.IdDepartment','NOT LIKE',1)
+    */
+
+            return response()->json(['respuesta' => $allusers], 200);
+        }else{
+            $depts=DB::table('users_departments')
+            ->where('Id_user',Auth::user()->id)
+            ->get();
+            $final=[];
+
+            foreach($depts as $dept){
+                $allusers = DB::table('User')
+                ->join('Department', 'User.IdDepartment', '=', 'Department.IdDepartment')
+                ->where('User.IdDepartment','NOT LIKE',1)
+                ->where('User.IdDepartment',$dept->Id_department)
+                ->orderBy('User.Name', 'asc')
+                ->get();
+
+                foreach($allusers as $singleuser){
+                    array_push($final,$singleuser);
+                }
+
+            }
+            
+           
+
+            /*
+        por motivos de depurar la base de datos quitamos el filtro
+        ->where('User.IdDepartment','NOT LIKE',1)
+    */
+
+            return response()->json(['respuesta' => $final], 200);
+        }
     }
 
     /**
@@ -49,16 +81,24 @@ class UserController extends Controller
      *
      * @return json  respuesta
      */
-    public function allUsersOfPlataform(Request $request){
+    public function allUsersOfPlataform(Request $request)
+    {
 
         try {
             $allusers = DB::table('users')
                 ->join('role_user', 'users.id', '=', 'role_user.user_id')
                 ->join('roles', 'role_user.role_id', '=', 'roles.id')
-                ->select('users.id', DB::raw("CONCAT(users.name, ' ', users.last_name) as fullname"),
-                         'users.email', 'users.no_identidad', 'users.activo',
-                         'role_user.role_id', 'users.telefono', 'users.genero',
-                         'roles.name as nombre_rol')
+                ->select(
+                    'users.id',
+                    DB::raw("CONCAT(users.name, ' ', users.last_name) as fullname"),
+                    'users.email',
+                    'users.no_identidad',
+                    'users.activo',
+                    'role_user.role_id',
+                    'users.telefono',
+                    'users.genero',
+                    'roles.name as nombre_rol'
+                )
                 ->orderBy('fullname', 'asc')
                 ->get();
 
@@ -67,12 +107,11 @@ class UserController extends Controller
             $user->rol = $rol;
             return response()->json($user,200);*/
             if ($allusers) {
-                return response()->json(['respuesta'=> $allusers],200);
-            }else
-                return response()->json(['respuesta'=> 'No hay usuarios existentes en la plataforma.'],422);
-
+                return response()->json(['respuesta' => $allusers], 200);
+            } else
+                return response()->json(['respuesta' => 'No hay usuarios existentes en la plataforma.'], 422);
         } catch (Exception $e) {
-            return response()->json(['respuesta'=> 'Error inesperado allUsersOfPlataform.'],422);
+            return response()->json(['respuesta' => 'Error inesperado allUsersOfPlataform.'], 422);
         }
     }
 
@@ -84,17 +123,19 @@ class UserController extends Controller
      * @param  number  IdDepartment
      * @return json  respuesta
      */
-    public function userByDepartment(Request $request){
-    	$this->validate($request, [
+    public function userByDepartment(Request $request)
+    {
+        $this->validate($request, [
             'IdDepartment' => 'required',
         ]);
 
-    	$userByDepartment = UserBiometric::where([
-    							['IdDepartment', '=', request('IdDepartment')],
-                                ['Active', '=', 1]])
-    						->get();
+        $userByDepartment = UserBiometric::where([
+            ['IdDepartment', '=', request('IdDepartment')],
+            ['Active', '=', 1]
+        ])
+            ->get();
 
-    	return response()->json(['respuesta'=> $userByDepartment],200);
+        return response()->json(['respuesta' => $userByDepartment], 200);
     }
 
     /**
@@ -126,8 +167,9 @@ class UserController extends Controller
      * @param  number  IdUser
      * @return json  user
      */
-    public function userById(Request $request){
-    	$this->validate($request, [
+    public function userById(Request $request)
+    {
+        $this->validate($request, [
             'IdUser' => 'required',
         ]);
 
@@ -141,17 +183,17 @@ class UserController extends Controller
                 ->first();
 
             if ($userById) {
-                return response()->json(['respuesta'=> $userById],200);
+                return response()->json(['respuesta' => $userById], 200);
             } else {
-                return response()->json(['respuesta'=> 'El usuario no existe.'],422);
+                return response()->json(['respuesta' => 'El usuario no existe.'], 422);
             }
         } else {
             $userById = UserBiometric::find(request('IdUser'));
 
             if ($userById) {
-                return response()->json(['respuesta'=> $userById],200);
+                return response()->json(['respuesta' => $userById], 200);
             } else {
-                return response()->json(['respuesta'=> 'El usuario no existe 2.'],422);
+                return response()->json(['respuesta' => 'El usuario no existe 2.'], 422);
             }
         }
     }
@@ -171,18 +213,19 @@ class UserController extends Controller
      * @param  array  fingerprints
      * @return json  mensaje
      */
-    public function editUser(Request $request){
-    	try {
-    		date_default_timezone_set('America/Tegucigalpa');
-	    	$this->validate($request, [
-	    		'IdUser' => 'required',
-	            'Name' => 'required',
-	            'IdentificationNumber' => 'required',
-	            'Birthday' => 'required',
-	            'IdDepartment' => 'required',
-	            'Active' => 'required',
+    public function editUser(Request $request)
+    {
+        try {
+            date_default_timezone_set('America/Tegucigalpa');
+            $this->validate($request, [
+                'IdUser' => 'required',
+                'Name' => 'required',
+                'IdentificationNumber' => 'required',
+                'Birthday' => 'required',
+                'IdDepartment' => 'required',
+                'Active' => 'required',
                 'ShiftId' => 'required'
-	        ]);
+            ]);
 
             //declaracion de variables
             $errors = [];
@@ -206,7 +249,7 @@ class UserController extends Controller
             /*INICIO inyectar usuario a sus nuevos dispositivos*/
             $registerController = new RegisterController();
             $inyectarEmpleado = $registerController->inyectarEmpleado($lista, $fingerprints, $id, $name, $estado);
-            if (count($inyectarEmpleado) == 0 ) {
+            if (count($inyectarEmpleado) == 0) {
 
                 /*INICIO actualizar usuario*/
                 $user = UserBiometric::find($id);
@@ -223,7 +266,7 @@ class UserController extends Controller
                 /*INICIO actualizar horario asignado si no tiene se le crea*/
                 $UserShiftId = UserShift::where('IdUser', '=', $id)->value('UserShiftId');
                 if (!$UserShiftId) {
-                    /*INICIO asignar dispositivo/os al usuario*/ 
+                    /*INICIO asignar dispositivo/os al usuario*/
                     $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
                     /*FIN asignar dispositivo/os al usuario*/
 
@@ -240,53 +283,53 @@ class UserController extends Controller
                     $horario->save();
                     /*FIN asignar horario/os al usuario*/
                 } else {
-                    /*INICIO asignar dispositivo/os al usuario*/ 
+                    /*INICIO asignar dispositivo/os al usuario*/
                     $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
                     /*FIN asignar dispositivo/os al usuario*/
 
                     /*INICIO asignar horario/os al usuario*/
                     DB::table('UserShift')->where([
-                                                    ['IdUser', '=', $id],
-                                                    ['UserShiftId', '=', $UserShiftId]
-                                                  ])
-                                          ->update(['ShiftId'=>request('ShiftId')]);
+                        ['IdUser', '=', $id],
+                        ['UserShiftId', '=', $UserShiftId]
+                    ])
+                        ->update(['ShiftId' => request('ShiftId')]);
                     /*FIN asignar horario/os al usuario*/
                 }
                 /*FIN actualizar horario asignado*/
 
-                return response()->json(['respuesta' => 'Usuario actualizado con éxito.',
-                                         'user' => $user,
-                                         'errors' => $errors],200);
-
-            }else{
-                $errors = [ 'No se creo el empleado, su horario y dispositivos asignado localmente. Para la correcta funcionalidad por favor verifique que el o los dispositivos seleccionados estan encendidos, en red u otro problema, si no es así descarte los dispositivos con fallos.' ];
+                return response()->json([
+                    'respuesta' => 'Usuario actualizado con éxito.',
+                    'user' => $user,
+                    'errors' => $errors
+                ], 200);
+            } else {
+                $errors = ['No se creo el empleado, su horario y dispositivos asignado localmente. Para la correcta funcionalidad por favor verifique que el o los dispositivos seleccionados estan encendidos, en red u otro problema, si no es así descarte los dispositivos con fallos.'];
                 return response()->json(['respuesta' => $inyectarEmpleado, 'errors' => $errors], 422);
             }
             /*FIN inyectar usuario a sus nuevos dispositivos*/
-	    
-    	} catch (Exception $e) {
-    		Log::error('Error update_user: '.$e);
-    		return response()->json(['respuesta'=> 'Error al actualizar el usuario. ERRR: '.$e->getMessage()],422);
-    	}
+        } catch (Exception $e) {
+            Log::error('Error update_user: ' . $e);
+            return response()->json(['respuesta' => 'Error al actualizar el usuario. ERRR: ' . $e->getMessage()], 422);
+        }
     }
 
     public function asignarDispositivos($listaDispositivos, $id)
     {
         $errors = [];
         $tamaño = count($listaDispositivos);
-        for ($i=0; $i < $tamaño; $i++) { 
+        for ($i = 0; $i < $tamaño; $i++) {
             $IdDevice = $listaDispositivos[$i]['IdDevice'];
             $existe = Device_User::where([
-                                        ['IdUser', '=', $id],
-                                        ['IdDevice', '=', $IdDevice]
-                                     ])->first();
+                ['IdUser', '=', $id],
+                ['IdDevice', '=', $IdDevice]
+            ])->first();
             if (!$existe) {
-               $Device_User = new Device_User();
-               $Device_User->IdUser = $id;
-               $Device_User->IdDevice = $IdDevice;
-               $Device_User->save();
-            }else{
-                array_push($errors, $i.' de los '.$tamaño.' dispositivos no existen.');
+                $Device_User = new Device_User();
+                $Device_User->IdUser = $id;
+                $Device_User->IdDevice = $IdDevice;
+                $Device_User->save();
+            } else {
+                array_push($errors, $i . ' de los ' . $tamaño . ' dispositivos no existen.');
             }
         }
         return $errors;
@@ -299,47 +342,49 @@ class UserController extends Controller
      *
      * @return json user
      */
-    public function infoUserCurrent(){
-        if(Auth::check()){
-            $user=Auth::user();
-            $rol= RoleUser::where('user_id', Auth::user()->id)->value('role_id'); 
-            $user->rol = $rol;   
-            return response(json_encode($user),200);
+    public function infoUserCurrent()
+    {
+        if (Auth::check()) {
+            $user = Auth::user();
+            $rol = RoleUser::where('user_id', Auth::user()->id)->value('role_id');
+            $user->rol = $rol;
+            return response(json_encode($user), 200);
         }
     }
 
-    public function actplatformuser(){
-    
-            $u_id=request('id');
-            $user=DB::table('users')->where('id','=',$u_id);
-            $user->update(['name'=>request('name'),
-            'last_name'=>request('last_name'),
-            'no_identidad'=>request('no_identidad'),
-            'email'=>request('email'),
-            'telefono'=>request('telefono'),
-            'genero'=>request('genero')]);
+    public function actplatformuser()
+    {
 
-            if(!empty(request('dispositivos'))){
-                DoorPermissionsController::save(request('id'), request('dispositivos'));
-                
-            }
-    
-            if(!empty(request('departamentos'))){
-                UsersDepartmentsController::save(request('id'), request('departamentos'));
-               
-            }
-            
+        $u_id = request('id');
+        $user = DB::table('users')->where('id', '=', $u_id);
+        $user->update([
+            'name' => request('name'),
+            'last_name' => request('last_name'),
+            'no_identidad' => request('no_identidad'),
+            'email' => request('email'),
+            'telefono' => request('telefono'),
+            'genero' => request('genero')
+        ]);
+
+        if (!empty(request('dispositivos'))) {
+            DoorPermissionsController::save(request('id'), request('dispositivos'));
+        }
+
+        if (!empty(request('departamentos'))) {
+            UsersDepartmentsController::save(request('id'), request('departamentos'));
+        }
+
         return response()->json('Usuario Actualizado con éxito.', 200);
-            
     }
 
-    public function platformuserData(){
-        $u_id=request('id_user');
-        $user=DB::table('users')->where('id','=',$u_id)->get(['id','name','last_name','no_identidad','email','telefono','genero']);
-        
+    public function platformuserData()
+    {
+        $u_id = request('id_user');
+        $user = DB::table('users')->where('id', '=', $u_id)->get(['id', 'name', 'last_name', 'no_identidad', 'email', 'telefono', 'genero']);
 
-        if($user){
-            return response()->json($user->first(),200);
+
+        if ($user) {
+            return response()->json($user->first(), 200);
         }
     }
 
@@ -349,11 +394,12 @@ class UserController extends Controller
      *
      * @return int id
      */
-    public function idOfUserCurrent(){
-        if(Auth::check()){
-            $user=Auth::user();
+    public function idOfUserCurrent()
+    {
+        if (Auth::check()) {
+            $user = Auth::user();
             return $user->id;
-        }else{
+        } else {
             return 'Login please';
         }
     }

@@ -103,7 +103,7 @@ class ReportController extends Controller
                             $reportFor[$y]->horasrealestrabajadas = "marcaje incorrecto";
                             $reportFor[$y]->horastrabajadas = "marcaje incorrecto";
                             $reportFor[$y]->salioantes="marcaje incorrecto";
-
+                            $reports[$y]->extras="marcaje incorrecto";
                         }else{
                             $reportFor[$y]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
                             $reportFor[$y]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
@@ -112,8 +112,14 @@ class ReportController extends Controller
                             $hos=$reportFor[$y]->hora_salida;
                             $mos=$reportFor[$y]->minutos_salida;
                             $reportFor[$y]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                            $reports[$y]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
 
                         }
+                        $hrme=intval(substr($reports[$y]->fecha_y_hora_marco_min,0,2));
+                        $mme=intval(substr($reports[$y]->fecha_y_hora_marco_min,3,5));
+                        $heo=$reports[$y]->hora_entrada;
+                        $meo=$reports[$y]->minutos_entrada;
+                        $reports[$y]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
                         $reportFor[$y]->dia = $dia;
                         $reportFor[$y]->fecha = $fecha;
                         array_push($pila, $reportFor[$y]);
@@ -188,7 +194,7 @@ class ReportController extends Controller
                         $reportFor[$y]->horasrealestrabajadas = "marcaje incorrecto";
                         $reportFor[$y]->horastrabajadas = "marcaje incorrecto";
                         $reportFor[$y]->salioantes="marcaje incorrecto";
-
+                        $reports[$y]->extras="marcaje incorrecto";
                     }else{
                         $reportFor[$y]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
                         $reportFor[$y]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
@@ -197,8 +203,14 @@ class ReportController extends Controller
                         $hos=$reportFor[$y]->hora_salida;
                         $mos=$reportFor[$y]->minutos_salida;
                         $reportFor[$y]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                        $reports[$y]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
 
                     }
+                    $hrme=intval(substr($reports[$y]->fecha_y_hora_marco_min,0,2));
+                    $mme=intval(substr($reports[$y]->fecha_y_hora_marco_min,3,5));
+                    $heo=$reports[$y]->hora_entrada;
+                    $meo=$reports[$y]->minutos_entrada;
+                    $reports[$y]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
                     $reportFor[$y]->dia = $dia;
                     $reportFor[$y]->fecha = $fecha;
                     array_push($pila, $reportFor[$y]);
@@ -268,7 +280,7 @@ class ReportController extends Controller
                         $reports[$i]->horasrealestrabajadas = "marcaje incorrecto";
                         $reports[$i]->horastrabajadas = "marcaje incorrecto";
                         $reports[$i]->salioantes="marcaje incorrecto";
-
+                        $reports[$i]->extras="marcaje incorrecto";
                     }else{
                         $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
                         $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
@@ -277,8 +289,13 @@ class ReportController extends Controller
                         $hos=$reports[$i]->hora_salida;
                         $mos=$reports[$i]->minutos_salida;
                         $reports[$i]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
-
+                        $reports[$i]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
                     }
+                    $hrme=intval(substr($reports[$i]->fecha_y_hora_marco_min,0,2));
+                    $mme=intval(substr($reports[$i]->fecha_y_hora_marco_min,3,5));
+                    $heo=$reports[$i]->hora_entrada;
+                    $meo=$reports[$i]->minutos_entrada;
+                    $reports[$i]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
                     $reports[$i]->dia = $dia;
                     array_push($pila, $reports[$i]);
                 }
@@ -343,7 +360,7 @@ class ReportController extends Controller
                     $reports[$i]->horasrealestrabajadas = "marcaje incorrecto";
                     $reports[$i]->horastrabajadas = "marcaje incorrecto";
                     $reports[$i]->salioantes="marcaje incorrecto";
-
+                    $reports[$i]->extras="marcaje incorrecto";
                 }else{
                     $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
                     $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
@@ -352,9 +369,14 @@ class ReportController extends Controller
                     $hos=$reports[$i]->hora_salida;
                     $mos=$reports[$i]->minutos_salida;
                     $reports[$i]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                    $reports[$i]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
 
                 }
-
+                $hrme=intval(substr($reports[$i]->fecha_y_hora_marco_min,0,2));
+                $mme=intval(substr($reports[$i]->fecha_y_hora_marco_min,3,5));
+                $heo=$reports[$i]->hora_entrada;
+                $meo=$reports[$i]->minutos_entrada;
+                $reports[$i]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
                 $reports[$i]->dia = $dia;
                 array_push($pila, $reports[$i]);
             }
@@ -367,6 +389,29 @@ class ReportController extends Controller
             ], 200);
         } //fin de else principal
     } //fin de reports
+
+    /**
+     * Funcion calculoMarcadoAtrasado es para determinar si el empleado entró tarde o su marcaje está dentro del rango de 5 minutos antes
+     * o 5 minutos despues
+     * .
+     */
+    private function calculoMarcadoAtrasado($hem,$mem,$heo,$meo) {
+
+        $horaOficial = new DateTime();
+        $horaMarco = new DateTime();
+        $horaMarco->setTime($hem, $mem,00,000);
+        $horaOficial->setTime($heo, $meo, 00, 000);
+
+        if($horaMarco > $horaOficial){
+            $resta = $horaMarco ->diff ($horaOficial);
+
+            if($resta->format('%I')>5){
+                return "SÍ";
+            }
+        }
+
+        return "NO";
+    }
 
 
     /**
@@ -390,6 +435,37 @@ class ReportController extends Controller
         }
 
         return "salida correcta";
+    }
+
+    /**
+     * Funcion calculoHorasExtras es para las horas extras que hizo el empleado
+     * .
+     */
+
+
+    /**
+     * Abreviaturas
+     * hem = hora entrada marcar
+     * mem = minutos entrada marcar
+     * hsm = hora salida marcar
+     * msm = minutos salida marcar
+     */
+    private function calculoHorasExtras($hsm, $msm, $hso, $mso) {
+        $horaOficial = new DateTime();
+        $horaMarco = new DateTime();
+        $horaMarco->setTime($hsm, $msm, 00, 000);
+        $horaOficial->setTime($hso, $mso, 00, 000);
+
+        if($horaMarco>$horaOficial){
+            $resta = $horaOficial -> diff($horaMarco);
+            if($resta->format('%I')>5){
+                return $resta->format('%H:%I:%S');
+            }
+
+        }
+
+        return 0;
+
     }
 
     /**

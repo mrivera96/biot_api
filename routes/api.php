@@ -41,6 +41,7 @@ Route::get('depurarUser','Finca\Device_UserController@depurarUser');
 Route::get('depUserDB','Finca\Device_UserController@depUserDB');
 //FIN ROUTES BIOTRACKCMD
 //SOLO SON DE PRUEBA
+Route::get('calculo','Finca\ReportController@calculoMarcadoAdelantado');
 
 
 //INICIO ROUTES CATALOGPRODUCTS

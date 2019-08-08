@@ -95,6 +95,7 @@ class ReportController extends Controller
             $dia = $this->nombreDelDia($numDia);
 
             $horastrabajadas = $this->horasTrabajadas($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
+            
             $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
 
             $reportFor[$y]->dia = $dia;
@@ -236,10 +237,23 @@ class ReportController extends Controller
           $horastrabajadas = $this->horasTrabajadas($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
           $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
 
-          $reports[$i]->dia = $dia;
-          $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
-          $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
-          array_push($pila, $reports[$i]);
+          if($reports[$i]->fecha_y_hora_marco_min== $reports[$i]->fecha_y_hora_marco_max){
+            $reports[$i]->horasrealestrabajadas = "marcaje incorrecto";
+            $reports[$i]->horastrabajadas = "marcaje incorrecto";
+            $reports[$i]->salioantes="marcaje incorrecto";
+          
+          }else{
+            $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
+            $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";  
+            $hrms=intval( substr($reports[$i]->fecha_y_hora_marco_max,0,2));
+            $mms=intval(substr($reports[$i]->fecha_y_hora_marco_max,3,5));
+            $hos=$reports[$i]->hora_salida;
+            $mos=$reports[$i]->minutos_salida;
+            $reports[$i]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+            
+          }
+         $reports[$i]->dia = $dia;
+        array_push($pila, $reports[$i]);
         }
 
         $quantityEmployees = UserBiometric::where('IdDepartment', request('IdDepartment'))->count();
@@ -294,12 +308,17 @@ class ReportController extends Controller
         $numDia = $dt->dayOfWeek - 1;
         $dia = $this->nombreDelDia($numDia);
 
-        $horastrabajadas = $this->horasTrabajadas($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
-        $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
-
+        if($reports[$i]->fecha_y_hora_marco_min== $reports[$i]->fecha_y_hora_marco_max){
+          $reports[$i]->horasrealestrabajadas = "0 horas 0 minutos";
+          $reports[$i]->horastrabajadas = "0 horas 0 minutos";
+        }else{
+          $horastrabajadas = $this->horasTrabajadas($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
+          $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reports[$i]->fecha_y_hora_marco_min, $reports[$i]->fecha_y_hora_marco_max);
+          $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
+          $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";  
+        }
+        
         $reports[$i]->dia = $dia;
-        $reports[$i]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
-        $reports[$i]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
         array_push($pila, $reports[$i]);
       }
 
@@ -311,6 +330,28 @@ class ReportController extends Controller
       ], 200);
     } //fin de else principal
   } //fin de reports
+
+
+  /**
+   * Funcion calculoMarcadoAdelantado es para determinar si el empleado salió antes o su marcaje está dentro del rango de 5 minutos antes
+   * o 5 minutos despues
+   * .
+   */
+  private function calculoMarcadoAdelantado($hsm,$msm,$hso,$mso) {
+
+    $horaOficial = new DateTime();
+    $horaMarco = new DateTime();
+    $horaMarco->setTime($hsm, $msm,00,000);
+    $horaOficial->setTime($hso, $mso, 00, 000);
+
+    if($horaMarco < $horaOficial){
+      $resta = $horaMarco ->diff ($horaOficial);
+      return $resta->format('-%H:%I:%S');
+      
+    }
+
+    return "salida correcta";
+}
 
   /**
    * Funcion reportByUser devuelve un json con los registros de marcadado de hora
@@ -361,7 +402,7 @@ class ReportController extends Controller
         $numDia = $dt->dayOfWeek - 1;
         $dia = $this->nombreDelDia($numDia);
 
-        if($dia!="Sabado"){
+        if ($dia != "Sabado") {
           $reportFor = Rango_fechas::select(
             'nombre',
             'departamento',
@@ -387,36 +428,36 @@ class ReportController extends Controller
               'hora_salida',
               'minutos_salida'
             )
-            
+
             ->get();
-  
+
           $min = $reportFor[0]->fecha_y_hora_marco_min;
           $max = $reportFor[0]->fecha_y_hora_marco_max;
-  
+
           $dispositivoEntrada = Rango_fechas::select('dispositivo as dispEntrada')
             ->where([
               ['id', '=', $id], ['id_departamento', '=', $id_departamento],
               ['IdDia', '=', $numDia], [DB::raw('CONVERT(varchar, fecha, 8)'), '=', $min]
             ])->get();
-  
+
           $dispositivoSalida = Rango_fechas::select('dispositivo as dispSalida')
             ->where([
               ['id', '=', $id], ['id_departamento', '=', $id_departamento],
               ['IdDia', '=', $numDia], [DB::raw('CONVERT(varchar, fecha, 8)'), '=', $max]
             ])->get();
-  
+
           $reportFor[0]->dispositivoEntrada = $dispositivoEntrada[0]->dispEntrada;
           $reportFor[0]->dispositivoSalida = $dispositivoSalida[0]->dispSalida;
-  
+
           $tamaño2 = count($reportFor);
           for ($y = 0; $y < $tamaño2; $y++) {
             /*HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia*/
             $horasTrabajadasSinComer = $this->horasTrabajadas($min, $max);
             $horastrabajadasmenoshorasdecomer = $this->horasTrabajadasMenosHorasdeComer($min, $max);
-  
+
             /*HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia*/
             $totalHorasTrabajadasTeorico = $this->totalHorasTrabajadasTeorico($reportFor[$y]->hora_entrada, $reportFor[$y]->minutos_entrada, $reportFor[$y]->hora_salida, $reportFor[$y]->minutos_salida);
-  
+
             $reportFor[$y]->dia = $dia;
             $reportFor[$y]->fecha = $fecha;
             /*HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia*/
@@ -427,10 +468,7 @@ class ReportController extends Controller
             $reportFor[$y]->horasrealestrabajadasmilisegundos = $horastrabajadasmenoshorasdecomer->timestamp;
             $reportFor[$y]->horasrealestrabajadas = "{$horastrabajadasmenoshorasdecomer->hour} horas {$horastrabajadasmenoshorasdecomer->minute} minutos";
             array_push($pila, $reportFor[$y]);
-        }
-
-
-        
+          }
         }
       }
 
@@ -475,7 +513,7 @@ class ReportController extends Controller
         $dt = Carbon::createFromFormat('d/m/Y', $fecha);
         $numDia = $dt->dayOfWeek - 1;
         $dia = $this->nombreDelDia($numDia);
-       
+
         if ($dia != "Sabado") {
           $reportFor = Rango_fechas::select(
             'nombre',
@@ -543,9 +581,8 @@ class ReportController extends Controller
             'totalTeoricoFinal' => $reportFor[0]->horasteoricopordiamilisegundos,
             'totalRealTeoricoFinal' => $reportFor[0]->horasrealestrabajadasmilisegundos
           ], 200);
-        }else{
+        } else {
           return response()->json(['message' => 'El día sábado no es parte de los horarios de contrato'], 200);
-      
         }
       } else {
         return response()->json(['message' => 'El empleado no se presento a trabajar este día o no marco sus horarios.'], 200);
@@ -610,8 +647,8 @@ class ReportController extends Controller
   {
     $desayuno = System_Parameters::select('valor_parametro')->where('parametro', 'receso desayuno')->value('valor_parametro');
     $almuerzo = System_Parameters::select('valor_parametro')->where('parametro', 'receso almuerzo')->value('valor_parametro');
-    $horas = ((int)Str::substr($desayuno, 0, 2) + (int)Str::substr($almuerzo, 0, 2));
-    $minutos = ((int)Str::substr($desayuno, 3, 2) + (int)Str::substr($almuerzo, 3, 2));
+    $horas = ((int) Str::substr($desayuno, 0, 2) + (int) Str::substr($almuerzo, 0, 2));
+    $minutos = ((int) Str::substr($desayuno, 3, 2) + (int) Str::substr($almuerzo, 3, 2));
 
     $horasTrabajadas = $this->horasTrabajadas($horaMin, $horaMax);
     $horasRealesTrabajadas = Carbon::create(0, 0, 0, $horasTrabajadas->h, $horasTrabajadas->i);

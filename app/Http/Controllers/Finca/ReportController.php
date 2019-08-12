@@ -463,9 +463,7 @@ class ReportController extends Controller
             }
 
         }
-
         return 0;
-
     }
 
     /**
@@ -485,7 +483,7 @@ class ReportController extends Controller
         ]);
 
         $Str_fecha = request('fecha');
-        $between;
+
         try {
             //$between = "2018-11-1,2018-11-3";
             $between = explode(",", $Str_fecha);
@@ -507,6 +505,7 @@ class ReportController extends Controller
                 ->distinct()->orderBy('id', 'asc')
                 ->get();
 
+
             $tamaño = count($reports);
             $pila = [];
             for ($i = 0; $i < $tamaño; $i++) {
@@ -517,37 +516,43 @@ class ReportController extends Controller
                 $numDia = $dt->dayOfWeek - 1;
                 $dia = $this->nombreDelDia($numDia);
 
-                if ($dia != "Sabado") {
-                    $reportFor = Rango_fechas::select(
+
+                $reportFor = Rango_fechas::select(
+                    'nombre',
+                    'departamento',
+                    'nombre_horario',
+                    'hora_entrada',
+                    'minutos_entrada',
+                    'hora_salida',
+                    'minutos_salida',
+                    DB::raw('MIN(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_min'),
+                    DB::raw('MAX(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_max')
+                )
+                    ->where([
+                        ['id', '=', $id], ['id_departamento', '=', $id_departamento],
+                        ['IdDia', '=', $numDia],
+                        [DB::raw('CONVERT(varchar, fecha, 103)'), '=', $fecha]
+                    ])
+                    ->groupBy(
                         'nombre',
                         'departamento',
                         'nombre_horario',
                         'hora_entrada',
                         'minutos_entrada',
                         'hora_salida',
-                        'minutos_salida',
-                        DB::raw('MIN(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_min'),
-                        DB::raw('MAX(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_max')
+                        'minutos_salida'
                     )
-                        ->where([
-                            ['id', '=', $id], ['id_departamento', '=', $id_departamento],
-                            ['IdDia', '=', $numDia],
-                            [DB::raw('CONVERT(varchar, fecha, 103)'), '=', $fecha]
-                        ])
-                        ->groupBy(
-                            'nombre',
-                            'departamento',
-                            'nombre_horario',
-                            'hora_entrada',
-                            'minutos_entrada',
-                            'hora_salida',
-                            'minutos_salida'
-                        )
 
-                        ->get();
+                    ->get();
 
-                    $min = $reportFor[0]->fecha_y_hora_marco_min;
-                    $max = $reportFor[0]->fecha_y_hora_marco_max;
+
+
+
+                $tamaño2 = count($reportFor);
+                for ($y = 0; $y < $tamaño2; $y++) {
+
+                    $min = $reportFor[$y]->fecha_y_hora_marco_min;
+                    $max = $reportFor[$y]->fecha_y_hora_marco_max;
 
                     $dispositivoEntrada = Rango_fechas::select('dispositivo as dispEntrada')
                         ->where([
@@ -561,31 +566,51 @@ class ReportController extends Controller
                             ['IdDia', '=', $numDia], [DB::raw('CONVERT(varchar, fecha, 8)'), '=', $max]
                         ])->get();
 
-                    $reportFor[0]->dispositivoEntrada = $dispositivoEntrada[0]->dispEntrada;
-                    $reportFor[0]->dispositivoSalida = $dispositivoSalida[0]->dispSalida;
+                    $reportFor[$y]->dispositivoEntrada = $dispositivoEntrada[$y]->dispEntrada;
+                    $reportFor[$y]->dispositivoSalida = $dispositivoSalida[$y]->dispSalida;
 
-                    $tamaño2 = count($reportFor);
-                    for ($y = 0; $y < $tamaño2; $y++) {
-                        /*HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia*/
-                        $horasTrabajadasSinComer = $this->horasTrabajadas($min, $max);
-                        $horastrabajadasmenoshorasdecomer = $this->horasTrabajadasMenosHorasdeComer($min, $max);
+                   //HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia
+                   $horasTrabajadasSinComer = $this->horasTrabajadas($min, $max);
+                   $horastrabajadasmenoshorasdecomer = $this->horasTrabajadasMenosHorasdeComer($min, $max);
 
-                        /*HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia*/
-                        $totalHorasTrabajadasTeorico = $this->totalHorasTrabajadasTeorico($reportFor[$y]->hora_entrada, $reportFor[$y]->minutos_entrada, $reportFor[$y]->hora_salida, $reportFor[$y]->minutos_salida);
+                   //HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia
+                   $totalHorasTrabajadasTeorico = $this->totalHorasTrabajadasTeorico($reportFor[$y]->hora_entrada, $reportFor[$y]->minutos_entrada, $reportFor[$y]->hora_salida, $reportFor[$y]->minutos_salida);
 
-                        $reportFor[$y]->dia = $dia;
-                        $reportFor[$y]->fecha = $fecha;
-                        /*HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia*/
-                        $reportFor[$y]->horasteoricopordiamilisegundos = $totalHorasTrabajadasTeorico->timestamp;
-                        $reportFor[$y]->horasteoricopordia = "{$totalHorasTrabajadasTeorico->hour} horas {$totalHorasTrabajadasTeorico->minute} minutos";
-                        /*HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia*/
-                        $reportFor[$y]->horastrabajadassincomer = $horasTrabajadasSinComer->format('%h horas %i minutos');
-                        $reportFor[$y]->horasrealestrabajadasmilisegundos = $horastrabajadasmenoshorasdecomer->timestamp;
-                        $reportFor[$y]->horasrealestrabajadas = "{$horastrabajadasmenoshorasdecomer->hour} horas {$horastrabajadasmenoshorasdecomer->minute} minutos";
-                        array_push($pila, $reportFor[$y]);
-                    }
+                   $reportFor[$y]->dia = $dia;
+                   $reportFor[$y]->fecha = $fecha;
+
+                   //HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia
+                   $reportFor[$y]->horasteoricopordiamilisegundos = $totalHorasTrabajadasTeorico->timestamp;
+                   $reportFor[$y]->horasteoricopordia = "{$totalHorasTrabajadasTeorico->hour} horas {$totalHorasTrabajadasTeorico->minute} minutos";
+                   //HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia
+
+                   if($min == $max){
+                       $reportFor[$y]->horastrabajadassincomer = "marcaje incorrecto";
+                       $reportFor[$y]->horastrabajadassincomer = "marcaje incorrecto";
+                       $reportFor[$y]->salioantes="marcaje incorrecto";
+                       $reportFor[$y]->extras="marcaje incorrecto";
+                   }else{
+                       $reportFor[$y]->horastrabajadassincomer = $horasTrabajadasSinComer->format('%h horas %i minutos');
+                       $reportFor[$y]->horasrealestrabajadasmilisegundos = $horastrabajadasmenoshorasdecomer->timestamp;
+                       $reportFor[$y]->horasrealestrabajadas = "{$horastrabajadasmenoshorasdecomer->hour} horas {$horastrabajadasmenoshorasdecomer->minute} minutos";
+                       $hrms=intval( substr($reportFor[$y]->fecha_y_hora_marco_max,0,2));
+                       $mms=intval(substr($reportFor[$y]->fecha_y_hora_marco_max,3,5));
+                       $hos=$reportFor[$y]->hora_salida;
+                       $mos=$reportFor[$y]->minutos_salida;
+                       $reportFor[$y]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                       $reportFor[$y]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
+                   }
+                   $hrme=intval(substr($reportFor[$y]->fecha_y_hora_marco_min,0,2));
+                   $mme=intval(substr($reportFor[$y]->fecha_y_hora_marco_min,3,5));
+                   $heo=$reportFor[$y]->hora_entrada;
+                   $meo=$reportFor[$y]->minutos_entrada;
+                   $reportFor[$y]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
+
+                    array_push($pila,$reportFor[$y]);
                 }
+
             }
+
 
             $arrayTeoricoMilisegundos = [];
             $arrayRealTeoricoMilisegundos = [];
@@ -685,11 +710,30 @@ class ReportController extends Controller
                     $reportFor[0]->fecha = $fecha;
                     /*HORAS TEORICAS EN MILISEGUNDOS POR DIA basado en el horario de ese dia*/
                     $reportFor[0]->horasteoricopordiamilisegundos = $totalHorasTrabajadasTeorico->timestamp;
-                    $reportFor[0]->horasteoricopordia = "{$totalHorasTrabajadasTeorico->hour} horas {$totalHorasTrabajadasTeorico->minute} minutos";
+                    //$reportFor[0]->horasteoricopordia = "{$totalHorasTrabajadasTeorico->hour} horas {$totalHorasTrabajadasTeorico->minute} minutos";
                     /*HORAS TRABAJADAS EN MILISEGUNDOS POR DIA basado en la hora de entrada y salida de ese dia*/
-                    $reportFor[0]->horastrabajadassincomer = $horasTrabajadasSinComer->format('%h horas %i minutos');
-                    $reportFor[0]->horasrealestrabajadasmilisegundos = $horastrabajadasmenoshorasdecomer->timestamp;
-                    $reportFor[0]->horasrealestrabajadas = "{$horastrabajadasmenoshorasdecomer->hour} horas {$horastrabajadasmenoshorasdecomer->minute} minutos";
+                    if($min== $max){
+                        $reportFor[0]->horastrabajadassincomer = "marcaje incorrecto";
+                        $reportFor[0]->horasrealestrabajadas = "marcaje incorrecto";
+                        $reportFor[0]->salioantes="marcaje incorrecto";
+                        $reports[0]->extras="marcaje incorrecto";
+                    }else{
+                        $reportFor[0]->horastrabajadassincomer = $horasTrabajadasSinComer->format('%h Horas %i minutos');
+                        $reportFor[0]->horasrealestrabajadasmilisegundos = $horastrabajadasmenoshorasdecomer->timestamp;
+                        $reportFor[0]->horasrealestrabajadas = "{$horastrabajadasmenoshorasdecomer->hour} horas {$horastrabajadasmenoshorasdecomer->minute} minutos";
+                        $hrms=intval( substr($reportFor[0]->fecha_y_hora_marco_max,0,2));
+                        $mms=intval(substr($reportFor[0]->fecha_y_hora_marco_max,3,5));
+                        $hos=$reportFor[0]->hora_salida;
+                        $mos=$reportFor[0]->minutos_salida;
+                        $reportFor[0]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                        $reportFor[0]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
+                    }
+                    $hrme=intval(substr($reportFor[0]->fecha_y_hora_marco_min,0,2));
+                    $mme=intval(substr($reportFor[0]->fecha_y_hora_marco_min,3,5));
+                    $heo=$reportFor[0]->hora_entrada;
+                    $meo=$reportFor[0]->minutos_entrada;
+                    $reportFor[0]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
+
 
                     return response()->json([
                         'respuesta' => $reportFor,

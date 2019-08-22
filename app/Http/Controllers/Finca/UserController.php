@@ -28,6 +28,14 @@ class UserController extends Controller
      *
      * @return json  respuesta
      */
+    public function allusrs(){
+        $allusers = DB::table('User')
+        ->join('Department', 'User.IdDepartment', '=', 'Department.IdDepartment')
+        ->where('User.IdDepartment','NOT LIKE',1)
+        ->orderBy('User.Name', 'asc')
+        ->get();
+        return response()->json($allusers, 200);
+    }
     public function allusers()
     {
         if (Auth::user()->id == 1) {

@@ -56,9 +56,9 @@ Route::post('getPhases', 'CatalogProducts\CatalogProductsController@getPhases');
 Route::get('departamentosOdooToSQL','CatalogProducts\OdooController@getDepartmentsInsert');//
 Route::get('horariosOdoo','CatalogProducts\OdooController@getShifts');//
 Route::get('detalleHorariosOdoo','CatalogProducts\OdooController@getShiftDetail');//
-//Route::get('empleadosOdoo','CatalogProducts\OdooController@getEmployees');//
+Route::get('empleadosOdoo','CatalogProducts\OdooController@getEmployees');//
 Route::get('empleadosOdooToSQL','CatalogProducts\OdooController@getEmployeesInsert');//
-
+Route::get('usuariosget','Finca\UserController@allusrs');
 
 Route::get('usuariosplataformaPrueba','Finca\UserController@allUsersOfPlataform');
 Route::post('reportesOdoo','Finca\ReportController@reports');

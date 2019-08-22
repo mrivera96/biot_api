@@ -11,7 +11,7 @@ use Carbon\Carbon;
 use DateTime;
 use App\System_Parameters;
 use Illuminate\Support\Str;
-
+use Auth;
 class ReportController extends Controller
 {
     /**
@@ -132,97 +132,98 @@ class ReportController extends Controller
                     'respuesta' => $pila,
                     'cantidadempleadosdepto' => $quantityEmployees
                 ], 200);
-            }
+            }else if(Auth::user()->id == 1){
 
-            $reports = Rango_fechas::select(
-                'id',
-                'nombre',
-                'id_departamento',
-                'departamento',
-                'nombre_horario',
-                DB::raw('CONVERT(varchar, fecha, 103) fecha')
-            )
-                ->whereRaw("fecha >= ? AND fecha <= ?", array($between[0] . " 00:00:00", $between[1] . " 23:59:59"))
-                ->distinct()->orderBy('id', 'asc')
-                ->get();
-
-            $tamaño = count($reports);
-            $pila = [];
-            for ($i = 0; $i < $tamaño; $i++) {
-
-                $id = $reports[$i]->id;
-                $id_departamento = $reports[$i]->id_departamento;
-                $fecha = $reports[$i]->fecha;
-                $dt = Carbon::createFromFormat('d/m/Y', $fecha);
-
-                $reportFor = Rango_fechas::select(
+                $reports = Rango_fechas::select(
+                    'id',
                     'nombre',
+                    'id_departamento',
                     'departamento',
                     'nombre_horario',
-                    'hora_entrada',
-                    'minutos_entrada',
-                    'hora_salida',
-                    'minutos_salida',
-                    DB::raw('MIN(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_min'),
-                    DB::raw('MAX(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_max')
+                    DB::raw('CONVERT(varchar, fecha, 103) fecha')
                 )
-                    ->where([
-                        ['id', '=', $id],
-                        ['IdDia', '=', $dt->dayOfWeek - 1],
-                        [DB::raw('CONVERT(varchar, fecha, 103)'), '=', $fecha]
-                    ])
-                    ->groupBy(
+                    ->whereRaw("fecha >= ? AND fecha <= ?", array($between[0] . " 00:00:00", $between[1] . " 23:59:59"))
+                    ->distinct()->orderBy('id', 'asc')
+                    ->get();
+
+                $tamaño = count($reports);
+                $pila = [];
+                for ($i = 0; $i < $tamaño; $i++) {
+
+                    $id = $reports[$i]->id;
+                    $id_departamento = $reports[$i]->id_departamento;
+                    $fecha = $reports[$i]->fecha;
+                    $dt = Carbon::createFromFormat('d/m/Y', $fecha);
+
+                    $reportFor = Rango_fechas::select(
                         'nombre',
                         'departamento',
                         'nombre_horario',
                         'hora_entrada',
                         'minutos_entrada',
                         'hora_salida',
-                        'minutos_salida'
+                        'minutos_salida',
+                        DB::raw('MIN(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_min'),
+                        DB::raw('MAX(CONVERT(varchar, fecha, 8)) as fecha_y_hora_marco_max')
                     )
-                    ->get();
+                        ->where([
+                            ['id', '=', $id],
+                            ['IdDia', '=', $dt->dayOfWeek - 1],
+                            [DB::raw('CONVERT(varchar, fecha, 103)'), '=', $fecha]
+                        ])
+                        ->groupBy(
+                            'nombre',
+                            'departamento',
+                            'nombre_horario',
+                            'hora_entrada',
+                            'minutos_entrada',
+                            'hora_salida',
+                            'minutos_salida'
+                        )
+                        ->get();
 
-                $tamañoFinal = count($reportFor);
-                for ($y = 0; $y < $tamañoFinal; $y++) {
-                    $numDia = $dt->dayOfWeek - 1;
-                    $dia = $this->nombreDelDia($numDia);
+                    $tamañoFinal = count($reportFor);
+                    for ($y = 0; $y < $tamañoFinal; $y++) {
+                        $numDia = $dt->dayOfWeek - 1;
+                        $dia = $this->nombreDelDia($numDia);
 
-                    $horastrabajadas = $this->horasTrabajadas($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
-                    $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
+                        $horastrabajadas = $this->horasTrabajadas($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
+                        $horasrealestrabajadas = $this->horasTrabajadasMenosHorasdeComer($reportFor[$y]->fecha_y_hora_marco_min, $reportFor[$y]->fecha_y_hora_marco_max);
 
-                    if($reportFor[$y]->fecha_y_hora_marco_min== $reportFor[$y]->fecha_y_hora_marco_max){
-                        $reportFor[$y]->horasrealestrabajadas = "marcaje incorrecto";
-                        $reportFor[$y]->horastrabajadas = "marcaje incorrecto";
-                        $reportFor[$y]->salioantes="marcaje incorrecto";
-                        $reports[$y]->extras="marcaje incorrecto";
-                    }else{
-                        $reportFor[$y]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
-                        $reportFor[$y]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
-                        $hrms=intval( substr($reportFor[$y]->fecha_y_hora_marco_max,0,2));
-                        $mms=intval(substr($reportFor[$y]->fecha_y_hora_marco_max,3,5));
-                        $hos=$reportFor[$y]->hora_salida;
-                        $mos=$reportFor[$y]->minutos_salida;
-                        $reportFor[$y]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
-                        $reports[$y]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
+                        if($reportFor[$y]->fecha_y_hora_marco_min== $reportFor[$y]->fecha_y_hora_marco_max){
+                            $reportFor[$y]->horasrealestrabajadas = "marcaje incorrecto";
+                            $reportFor[$y]->horastrabajadas = "marcaje incorrecto";
+                            $reportFor[$y]->salioantes="marcaje incorrecto";
+                            $reports[$y]->extras="marcaje incorrecto";
+                        }else{
+                            $reportFor[$y]->horastrabajadas = $horastrabajadas->format('%h horas %i minutos');
+                            $reportFor[$y]->horasrealestrabajadas = "{$horasrealestrabajadas->hour} horas {$horasrealestrabajadas->minute} minutos";
+                            $hrms=intval( substr($reportFor[$y]->fecha_y_hora_marco_max,0,2));
+                            $mms=intval(substr($reportFor[$y]->fecha_y_hora_marco_max,3,5));
+                            $hos=$reportFor[$y]->hora_salida;
+                            $mos=$reportFor[$y]->minutos_salida;
+                            $reportFor[$y]->salioantes=$this->calculoMarcadoAdelantado($hrms,$mms,$hos,$mos);
+                            $reports[$y]->extras=$this->calculoHorasExtras($hrms,$mms,$hos,$mos);
 
+                        }
+                        $hrme=intval(substr($reports[$y]->fecha_y_hora_marco_min,0,2));
+                        $mme=intval(substr($reports[$y]->fecha_y_hora_marco_min,3,5));
+                        $heo=$reports[$y]->hora_entrada;
+                        $meo=$reports[$y]->minutos_entrada;
+                        $reports[$y]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
+                        $reportFor[$y]->dia = $dia;
+                        $reportFor[$y]->fecha = $fecha;
+                        array_push($pila, $reportFor[$y]);
                     }
-                    $hrme=intval(substr($reports[$y]->fecha_y_hora_marco_min,0,2));
-                    $mme=intval(substr($reports[$y]->fecha_y_hora_marco_min,3,5));
-                    $heo=$reports[$y]->hora_entrada;
-                    $meo=$reports[$y]->minutos_entrada;
-                    $reports[$y]->asis=$this->calculoMarcadoAtrasado($hrme,$mme,$heo,$meo);
-                    $reportFor[$y]->dia = $dia;
-                    $reportFor[$y]->fecha = $fecha;
-                    array_push($pila, $reportFor[$y]);
                 }
+
+                $quantityEmployees = UserBiometric::where('Active', 1)->count();
+
+                return response()->json([
+                    'respuesta' => $pila,
+                    'cantidadempleadosdepto' => $quantityEmployees
+                ], 200);
             }
-
-            $quantityEmployees = UserBiometric::where('Active', 1)->count();
-
-            return response()->json([
-                'respuesta' => $pila,
-                'cantidadempleadosdepto' => $quantityEmployees
-            ], 200);
         } else {
             if (request('IdDepartment')) {
 
@@ -306,9 +307,8 @@ class ReportController extends Controller
                     'respuesta' => $pila,
                     'cantidadempleadosdepto' => $quantityEmployees
                 ], 200);
-            }
-
-            $reports = DB::table('User')
+            }else if(Auth::user()->id == 1){
+                $reports = DB::table('User')
                 ->join('Record', 'User.IdUser', '=', 'Record.IdUser')
                 ->join('Department', 'User.IdDepartment', '=', 'Department.IdDepartment')
                 ->join('UserShift', 'User.IdUser', '=', 'UserShift.IdUser')
@@ -387,6 +387,9 @@ class ReportController extends Controller
                 'respuesta' => $pila,
                 'cantidadempleadosdepto' => $quantityEmployees
             ], 200);
+            }
+
+            
         } //fin de else principal
     } //fin de reports
 

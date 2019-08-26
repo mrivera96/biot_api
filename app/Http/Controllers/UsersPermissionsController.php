@@ -33,7 +33,12 @@ class UsersPermissionsController extends Controller
                 'edithrs'=>$permissions['edithrs'],
                 'creaparam'=>$permissions['creaparam'],
                 'crearusrs'=>$permissions['crearusrs'],
-                'editusrs'=>$permissions['editusrs']]);
+                'editusrs'=>$permissions['editusrs'],
+                    'param_sect'=>$permissions['param_sect'],
+                    'users_sect'=>$permissions['users_sect'],
+                    'hors_sect'=>$permissions['hors_sect'],
+                    'btn_editemp'=>$permissions['btn_editemp']
+                ]);
                 return response()->json('Permisos guardados correctamente', 200);
             }catch(Exception $e){
                 return response()->json('Error al actualizar los permisos.',500);
@@ -59,6 +64,10 @@ class UsersPermissionsController extends Controller
                 $new->creaparam		=$permissions['creaparam'];
                 $new->crearusrs		=$permissions['crearusrs'];
                 $new->editusrs		=$permissions['editusrs'];
+                $new->param_sect    =$permissions['param_sect'];
+                $new->users_sect    =$permissions['users_sect'];
+                $new->hors_sect     =$permissions['hors_sect'];
+                $new->btn_editemp   =$permissions['btn_editemp'];
                 $new->save();
                 return response()->json('Permisos guardados correctamente', 200);
             }catch(Exception $e){
@@ -88,7 +97,12 @@ class UsersPermissionsController extends Controller
             'edithrs',
             'creaparam',
             'crearusrs',
-            'editusrs'])->first();
+            'editusrs',
+                'param_sect',
+                'users_sect',
+                'hors_sect',
+                'btn_editemp'
+                ])->first();
             return response()->json(['id'=>$exists,'permisos'=>$permisos], 200);
         }else{
             return response()->json("Este usuario no tiene permisos asignados", 200);

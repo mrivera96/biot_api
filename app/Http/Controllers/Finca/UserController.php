@@ -240,81 +240,101 @@ class UserController extends Controller
             $id = request('IdUser');
             $name = request('Name');
             $estado = request('Active');
-            $lista = request('listaDispositivos');
-            $fingerprints = request('fingerprints');
 
-            /*no obligatorio pero recibira lista de dispositivos
+            $fingerprints = request('fingerprints');
+            if(isset($request->listaDispositivos)){
+                $lista = request('listaDispositivos');
+                /*no obligatorio pero recibira lista de dispositivos
               si esta vacia la lista no hace nada solo actualiza la data del empleado
               de lo contrario procedemos a inyectar los nuevos dispositivos
 
 
               crear instancia de biometrico por ip y usar la funcion update_user_data
 
-              modificacion futura al tener el escaner dactilar es actualizar una huella en 
-              especifico usar update_user_fingerprint ($user_id, $index, $data) solo si envian nuevas 
+              modificacion futura al tener el escaner dactilar es actualizar una huella en
+              especifico usar update_user_fingerprint ($user_id, $index, $data) solo si envian nuevas
               huellas por medio de cada disp.*/
 
-            /*INICIO inyectar usuario a sus nuevos dispositivos*/
-            $registerController = new RegisterController();
-            $inyectarEmpleado = $registerController->inyectarEmpleado($lista, $fingerprints, $id, $name, $estado);
-            if (count($inyectarEmpleado) == 0) {
+                /*INICIO inyectar usuario a sus nuevos dispositivos*/
+                $registerController = new RegisterController();
+                $inyectarEmpleado = $registerController->inyectarEmpleado($lista, $fingerprints, $id, $name, $estado);
+                if (count($inyectarEmpleado) == 0) {
 
-                /*INICIO actualizar usuario*/
-                $user = UserBiometric::find($id);
-                $user->Name = $name;
-                $user->IdentificationNumber = request('IdentificationNumber');
-                $user->Birthday = request('Birthday');
-                $user->IdDepartment = request('IdDepartment');
-                $user->Active = $estado;
-                $user->ModifiedBy = $this->idOfUserCurrent();
-                $user->ModifiedDatetime = date('Y-m-d H:i:s');
-                $response = $user->save();
-                /*FIN actualizar usuario*/
+                    /*INICIO actualizar usuario*/
+                    $user = UserBiometric::find($id);
+                    $user->Name = $name;
+                    $user->IdentificationNumber = request('IdentificationNumber');
+                    $user->Birthday = request('Birthday');
+                    $user->IdDepartment = request('IdDepartment');
+                    $user->Active = $estado;
+                    $user->ModifiedBy = $this->idOfUserCurrent();
+                    $user->ModifiedDatetime = date('Y-m-d H:i:s');
+                    $response = $user->save();
+                    /*FIN actualizar usuario*/
 
-                /*INICIO actualizar horario asignado si no tiene se le crea*/
-                $UserShiftId = UserShift::where('IdUser', '=', $id)->value('UserShiftId');
-                if (!$UserShiftId) {
-                    /*INICIO asignar dispositivo/os al usuario*/
-                    $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
-                    /*FIN asignar dispositivo/os al usuario*/
+                    /*INICIO actualizar horario asignado si no tiene se le crea*/
+                    $UserShiftId = UserShift::where('IdUser', '=', $id)->value('UserShiftId');
+                    if (!$UserShiftId) {
+                        /*INICIO asignar dispositivo/os al usuario*/
+                        $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
+                        /*FIN asignar dispositivo/os al usuario*/
 
-                    /*INICIO asignar horario/os al usuario*/
-                    $dateCurrent = Carbon::now();
-                    //Suma 1 año a la fecha actual
-                    $endDate = $dateCurrent->addYears(1);
+                        /*INICIO asignar horario/os al usuario*/
+                        $dateCurrent = Carbon::now();
+                        //Suma 1 año a la fecha actual
+                        $endDate = $dateCurrent->addYears(1);
 
-                    $horario = new UserShift();
-                    $horario->IdUser = $user->IdUser;
-                    $horario->ShiftId = request('ShiftId');
-                    $horario->BeginDate = $dateCurrent;
-                    $horario->EndDate = $endDate;
-                    $horario->save();
-                    /*FIN asignar horario/os al usuario*/
+                        $horario = new UserShift();
+                        $horario->IdUser = $user->IdUser;
+                        $horario->ShiftId = request('ShiftId');
+                        $horario->BeginDate = $dateCurrent;
+                        $horario->EndDate = $endDate;
+                        $horario->save();
+                        /*FIN asignar horario/os al usuario*/
+                    } else {
+                        /*INICIO asignar dispositivo/os al usuario*/
+                        $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
+                        /*FIN asignar dispositivo/os al usuario*/
+
+                        /*INICIO asignar horario/os al usuario*/
+                        DB::table('UserShift')->where([
+                            ['IdUser', '=', $id],
+                            ['UserShiftId', '=', $UserShiftId]
+                        ])
+                            ->update(['ShiftId' => request('ShiftId')]);
+                        /*FIN asignar horario/os al usuario*/
+                    }
+                    /*FIN actualizar horario asignado*/
+
+                    return response()->json([
+                        'respuesta' => 'Usuario actualizado con éxito.',
+                        'user' => $user,
+                        'errors' => $errors
+                    ], 200);
+                    /*FIN inyectar usuario a sus nuevos dispositivos*/
                 } else {
-                    /*INICIO asignar dispositivo/os al usuario*/
-                    $errors = array_push($errors, $this->asignarDispositivos($lista, $id));
-                    /*FIN asignar dispositivo/os al usuario*/
-
-                    /*INICIO asignar horario/os al usuario*/
-                    DB::table('UserShift')->where([
-                        ['IdUser', '=', $id],
-                        ['UserShiftId', '=', $UserShiftId]
-                    ])
-                        ->update(['ShiftId' => request('ShiftId')]);
-                    /*FIN asignar horario/os al usuario*/
+                    $errors = ['No se creo el empleado, su horario y dispositivos asignado localmente. Para la correcta funcionalidad por favor verifique que el o los dispositivos seleccionados estan encendidos, en red u otro problema, si no es así descarte los dispositivos con fallos.'];
+                    return response()->json(['respuesta' => $inyectarEmpleado, 'errors' => $errors], 422);
                 }
-                /*FIN actualizar horario asignado*/
-
-                return response()->json([
-                    'respuesta' => 'Usuario actualizado con éxito.',
-                    'user' => $user,
-                    'errors' => $errors
-                ], 200);
-            } else {
-                $errors = ['No se creo el empleado, su horario y dispositivos asignado localmente. Para la correcta funcionalidad por favor verifique que el o los dispositivos seleccionados estan encendidos, en red u otro problema, si no es así descarte los dispositivos con fallos.'];
-                return response()->json(['respuesta' => $inyectarEmpleado, 'errors' => $errors], 422);
             }
-            /*FIN inyectar usuario a sus nuevos dispositivos*/
+
+            /*INICIO actualizar usuario*/
+            $user = UserBiometric::find($id);
+            $user->Name = $name;
+            $user->IdentificationNumber = request('IdentificationNumber');
+            $user->Birthday = request('Birthday');
+            $user->IdDepartment = request('IdDepartment');
+            $user->Active = $estado;
+            $user->ModifiedBy = $this->idOfUserCurrent();
+            $user->ModifiedDatetime = date('Y-m-d H:i:s');
+            $response = $user->save();
+            /*FIN actualizar usuario*/
+            return response()->json([
+                'respuesta' => 'Usuario actualizado con éxito.',
+                'user' => $user,
+                'errors' => $errors
+            ], 200);
+
         } catch (Exception $e) {
             Log::error('Error update_user: ' . $e);
             return response()->json(['respuesta' => 'Error al actualizar el usuario. ERRR: ' . $e->getMessage()], 422);

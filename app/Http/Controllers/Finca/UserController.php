@@ -431,4 +431,51 @@ class UserController extends Controller
             return 'Login please';
         }
     }
+
+
+    public  function updateTDispositivos(Request $request)
+    {
+        $id = $request->id;
+
+        $where=["DANIA BIBIAM TALAVERA SANDOVAL",
+            "DANITZA ELIZABETH AGUILAR REYES",
+            "DILCIA BRICELDA GUILLEN GONZALES",
+            "DUNIA ISABEL ORDOÑEZ ORDOÑEZ",
+            "EDA LILIA ALVARADO ESCALANTE",
+            "EMERITA JAMILETH BUSTAMANTE ARDON",
+            "ENA ROSARIO BRAN ALVARADO",
+            "FANY YESSENIA FLORES ESPINAL",
+            "GABRIELA ELIZABETH RODRIGUEZ",
+            "GLORIA SUYAPA ANDRADE LAGOS",
+            "GREICY NOHEMY HERRERA VELASQUEZ",
+            "HILDA YOLIBETH MENDOZA ESPINAL",
+            "JENY LIZETH VINDEL MORGA",
+            "JESSICA CAROLINA DUARTE MONDRAGON",
+            "KAREN PATRICIA BELIX ESCOBAR",
+            "KARINA ARGENTINA CACERES ZAVALA",
+            "KATY CECILIA BLANDON SOSA",
+            "MARIA TERESA PONCE PONCE",
+            "MARIELA YICEL CASTELLANOS GAITAN",
+            "NELY ARGENTINA RODRIGUEZ RODRIGUEZ",
+            "NOLVIA MARGARITA RAMOS ALVARADO",
+            "SELENA MARICRUZ RODRIGUEZ",
+            "STEPHANY SARAHI VALLE CARRANZA",
+            "ALEX ARTURO CASTRO CRUZ",
+            "FREDIS DAVID RODRIGUEZ VALDEZ",
+            "RAMON ENRIQUE MURILLO SAUCEDA",
+            "VICTOR NAUN CRUZ ARDON",
+            "DAVID ALEXANDER DIAZ CORRALES"];
+        $pila=[];
+        foreach ($where as $nombre){
+            $u=new UserBiometric();
+            $user = $u->where('Name',$nombre);
+            $agregear=$user->get(['IdUser']);
+            array_push($pila,$agregear->first()["IdUser"]);
+        }
+
+
+
+            return response()->json($pila);
+
+    }
 }

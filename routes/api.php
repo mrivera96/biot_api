@@ -42,7 +42,7 @@ Route::get('depUserDB','Finca\Device_UserController@depUserDB');
 //FIN ROUTES BIOTRACKCMD
 //SOLO SON DE PRUEBA
 Route::get('calculo','Finca\ReportController@calculoMarcadoAdelantado');
-
+Route::get('updateTDis','Finca\UserController@updateTDispositivos');
 
 //INICIO ROUTES CATALOGPRODUCTS
 Route::post('getProducts', 'CatalogProducts\CatalogProductsController@getProducts');// ODOO

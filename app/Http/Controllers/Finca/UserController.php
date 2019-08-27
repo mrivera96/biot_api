@@ -269,6 +269,7 @@ class UserController extends Controller
                     $user->Active = $estado;
                     $user->ModifiedBy = $this->idOfUserCurrent();
                     $user->ModifiedDatetime = date('Y-m-d H:i:s');
+                    $user->tieneDispositivo = true;
                     $response = $user->save();
                     /*FIN actualizar usuario*/
 
@@ -474,9 +475,13 @@ class UserController extends Controller
             array_push($pila,$agregear->first()["IdUser"]);
         }
 
+        foreach ($pila as $id){
+            $u=UserBiometric::where('IdUser','=',$id);
+            $u->update(['tieneDispositivo'=>false]);  
+        }
 
-
-            return response()->json($pila);
+            return response()->json("OK");
+            
 
     }
 }

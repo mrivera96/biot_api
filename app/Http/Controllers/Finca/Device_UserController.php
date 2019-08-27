@@ -51,6 +51,15 @@ class Device_UserController extends Controller
             'IdUser' => 'required'
         ]);
 
+        $tieneDisp = DB::table('User')
+            ->where('tieneDispositivo', 1)
+            ->where('IdUser', $request->IdUser)
+            ->get();
+            
+        if(count($tieneDisp)==0){
+            return response()->json(['respuesta' => 'El empleado no tiene dispositivos asignados.'], 422);
+        }
+
         $listDevice = DB::table('Device')->select('IdDevice', 'IP', 'Type')->get();
         $IdUser = request('IdUser');
         $huellasEncontradas = [];

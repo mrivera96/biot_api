@@ -438,7 +438,7 @@ class UserController extends Controller
     {
         $id = $request->id;
 
-        $where=[
+        /*$where=[
             "DANIA BIBIAM TALAVERA SANDOVAL",
             "DANITZA ELIZABETH AGUILAR REYES",
             "DILCIA BRICELDA GUILLEN GONZALEZ",
@@ -477,11 +477,78 @@ class UserController extends Controller
 
         foreach ($pila as $id){
             $u=UserBiometric::where('IdUser','=',$id);
+            $u->update(['tieneDispositivo'=>true]);  
+        }*/
+
+        $pila=[1264,
+        1191,
+        1114,
+        1203,
+        1115,
+        1135,
+        1247,
+        1113,
+        1082,
+        1100,
+        1251,1238];
+        foreach ($pila as $id){
+            $u=UserBiometric::where('IdUser','=',$id);
             $u->update(['tieneDispositivo'=>false]);  
         }
+        
 
             return response()->json("OK");
             
 
+    }
+
+    public function getIds(){
+        $names=[
+        'Cristian Ariel Arguijo Zelaya',
+        'Abraham Alejandro Pineda',
+        'Eliers Ramon Irias Sauceda',
+        'Noe Exequiel Castellon Calix' ,
+        'Darwin Antonio Castellon Zelaya',
+        'Mario Ismael Figueroa Gonzalez' ,
+        'Katerin Virginia Cantillano Herrera',
+        'Marvin Efrain Ramos' ,
+        'Carolina Patricia Rodriguez' ,
+        'Wilson Ramon Godoy',
+        'Lily Yolanda Rivera Banegas',
+        'Ramon Ernesto Marchena Amador',
+        'Darwin Joel Chavez',
+        'Nelsy Beylina Mendoza Zuniga',
+        'Miguel Jose Hernandez Gaitan' ,
+        'Kenia Suyapa Salgado Galo',  
+        'Jose Alexis Ruiz Ardon',
+        'Mayro Boanerge Rodriguez Mascareño',
+        'Javier Ernesto Rodriguez Zambrano' ,
+        'Nohemy Damaris Midence Martinez',
+        'Maura Julia Rubio Izaguirre',
+        'Jaime Ruben Lopez Villalta' ,
+        'Dennis Alberto Figueroa Gonzalez', 
+        'Ingrid Melissa Bautista' ,
+        'Nadia Melissa Ardon Martinez' ,
+        'Juan Francisco Figueroa Zelaya',
+        'Nelson Alexander Amaya' ,
+        'Carlos David Quintanilla Oyuela',
+        'Wilson Noel Avila Amador',
+        'Jhony Joel Salcedo Ucles',
+        'Juan Andres Flores Alvarez',
+        'Jairo Esau Sosa Rodas' ,
+        'Mauda Yohana Lopez Zolorzano',
+        'Wilmer Noel Rodriguez Mejia' ,
+        'Deybin Manuel Castellon Zelaya',
+        'Nilson Enoc Lopez Hernandez',
+        'Yarlin Mariely Quintanilla Oyuela',  
+        'Isabel Antonio Sanchez Miranda' ,
+        'Pedro Joaquin Herrera Vallejo'];
+            $pila=[];
+        foreach($names as $name){
+            $ids=UserBiometric::where('name',$name);
+            $ids->update(['tieneDispositivo'=>false]);
+        }
+        return response()->json($pila);
+        
     }
 }

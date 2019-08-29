@@ -43,6 +43,7 @@ Route::get('depUserDB','Finca\Device_UserController@depUserDB');
 //SOLO SON DE PRUEBA
 Route::get('calculo','Finca\ReportController@calculoMarcadoAdelantado');
 Route::get('updateTDis','Finca\UserController@updateTDispositivos');
+Route::get('getIds','Finca\UserController@getIds');
 
 //INICIO ROUTES CATALOGPRODUCTS
 Route::post('getProducts', 'CatalogProducts\CatalogProductsController@getProducts');// ODOO
